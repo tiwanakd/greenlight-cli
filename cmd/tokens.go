@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/spf13/cobra"
-	"github.com/tiwanakd/greenlight-cli/client"
 )
 
 var tokenCmd = &cobra.Command{
@@ -35,23 +33,50 @@ or they not recevie the intial activation token for some reason`,
 			email = userEmail
 		}
 
-		jsonMap := client.NewJSONMap()
-		jsonMap.Add("email", email)
+		jsonMap := newJSONMap()
+		jsonMap.add("email", email)
 
-		jsReader, err := jsonMap.CreateJSONReader()
+		jsReader, err := jsonMap.createJSONReader()
 		if err != nil {
 			return err
 		}
 
-		err, code, _, body := apiClient.PostRequest("/v1/tokens/activation", jsReader)
+		err, code, _, body := apiClient.NewRequest(http.MethodPost, "/v1/tokens/activation", jsReader, nil)
 		if err != nil {
 			return err
 		}
 
 		if code != http.StatusAccepted {
-			cmd.SilenceUsage = true
-			cmd.SilenceErrors = true
-			return errors.New(body)
+			return customError(cmd, body)
+		}
+
+		fmt.Println(body)
+		return nil
+	},
+}
+
+var authenticationTokenCmd = &cobra.Command{
+	Use:   "authentication",
+	Short: "generate an authtentication token",
+	Long: `this command generates a token for user authtication;
+this token allow usage of futher transactions with the api`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		jsonMap := newJSONMap()
+		jsonMap.add("email", userEmail)
+		jsonMap.add("password", userPassword)
+
+		js, err := jsonMap.createJSONReader()
+		if err != nil {
+			return err
+		}
+
+		err, code, _, body := apiClient.NewRequest(http.MethodPost, "/v1/tokens/authentication", js, nil)
+		if err != nil {
+			return err
+		}
+
+		if code != http.StatusCreated {
+			return customError(cmd, body)
 		}
 
 		fmt.Println(body)
@@ -62,5 +87,11 @@ or they not recevie the intial activation token for some reason`,
 func init() {
 	activationTokenCmd.Flags().StringVarP(&userEmail, "email", "e", "", "email of registered user")
 
+	authenticationTokenCmd.Flags().StringVarP(&userEmail, "email", "e", "", "email of the user to authenticate")
+	authenticationTokenCmd.Flags().StringVarP(&userPassword, "password", "p", "", "password of the user to authenticate")
+	authenticationTokenCmd.MarkFlagRequired("email")
+	authenticationTokenCmd.MarkFlagRequired("password")
+
 	tokenCmd.AddCommand(activationTokenCmd)
+	tokenCmd.AddCommand(authenticationTokenCmd)
 }

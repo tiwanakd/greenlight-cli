@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -12,6 +13,13 @@ var (
 	userName     string
 	userEmail    string
 	userPassword string
+
+	activationToken string
+
+	movieTitle   string
+	movieYear    int32
+	movieRuntime string
+	movieGenres  []string
 )
 
 var apiClient = client.New()
@@ -28,17 +36,22 @@ var healthCheckCmd = &cobra.Command{
 	Use:   "healthcheck",
 	Short: "check the health of the greenlight api",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err, code, _, body := apiClient.GetRequest("/v1/healthcheck")
+		err, code, _, body := apiClient.NewRequest(http.MethodGet, "/v1/healthcheck", http.NoBody, nil)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Code: %d\nBody: %s\n", code, body)
+		if code != http.StatusOK {
+			return customError(cmd, body)
+		}
+
+		fmt.Printf("Body: %s\n", body)
 		return nil
 	},
 }
 
 func init() {
+	rootCmd.AddCommand(movieCmd)
 	rootCmd.AddCommand(userCmd)
 	rootCmd.AddCommand(tokenCmd)
 	rootCmd.AddCommand(healthCheckCmd)
