@@ -14,7 +14,8 @@ var (
 	userEmail    string
 	userPassword string
 
-	activationToken string
+	activationToken    string
+	authorizationToken string
 
 	movieTitle   string
 	movieYear    int32
@@ -50,7 +51,46 @@ var healthCheckCmd = &cobra.Command{
 	},
 }
 
+var loginCmd = &cobra.Command{
+	Use:   "login",
+	Short: "login to authenticate",
+	Long:  "login for the current terminal session (email and password required)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		jsonMap := newJSONMap()
+		jsonMap.add("email", userEmail)
+		jsonMap.add("password", userPassword)
+
+		js, err := jsonMap.createJSONReader()
+		if err != nil {
+			return err
+		}
+
+		err, code, _, body := apiClient.NewRequest(http.MethodPost, "/v1/tokens/authentication", js, nil)
+		if err != nil {
+			return err
+		}
+
+		if code != http.StatusCreated {
+			return customError(cmd, body)
+		}
+
+		err = addAuthTokenToFile([]byte(body))
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Logged in Successfully!")
+		return nil
+	},
+}
+
 func init() {
+	loginCmd.Flags().StringVarP(&userEmail, "email", "e", "", "email of user to register")
+	loginCmd.Flags().StringVarP(&userPassword, "password", "p", "", "password of user to register")
+	loginCmd.MarkFlagRequired("email")
+	loginCmd.MarkFlagRequired("password")
+	rootCmd.AddCommand(loginCmd)
+
 	rootCmd.AddCommand(movieCmd)
 	rootCmd.AddCommand(userCmd)
 	rootCmd.AddCommand(tokenCmd)

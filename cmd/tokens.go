@@ -55,43 +55,8 @@ or they not recevie the intial activation token for some reason`,
 	},
 }
 
-var authenticationTokenCmd = &cobra.Command{
-	Use:   "authentication",
-	Short: "generate an authtentication token",
-	Long: `this command generates a token for user authtication;
-this token allow usage of futher transactions with the api`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		jsonMap := newJSONMap()
-		jsonMap.add("email", userEmail)
-		jsonMap.add("password", userPassword)
-
-		js, err := jsonMap.createJSONReader()
-		if err != nil {
-			return err
-		}
-
-		err, code, _, body := apiClient.NewRequest(http.MethodPost, "/v1/tokens/authentication", js, nil)
-		if err != nil {
-			return err
-		}
-
-		if code != http.StatusCreated {
-			return customError(cmd, body)
-		}
-
-		fmt.Println(body)
-		return nil
-	},
-}
-
 func init() {
 	activationTokenCmd.Flags().StringVarP(&userEmail, "email", "e", "", "email of registered user")
 
-	authenticationTokenCmd.Flags().StringVarP(&userEmail, "email", "e", "", "email of the user to authenticate")
-	authenticationTokenCmd.Flags().StringVarP(&userPassword, "password", "p", "", "password of the user to authenticate")
-	authenticationTokenCmd.MarkFlagRequired("email")
-	authenticationTokenCmd.MarkFlagRequired("password")
-
 	tokenCmd.AddCommand(activationTokenCmd)
-	tokenCmd.AddCommand(authenticationTokenCmd)
 }
