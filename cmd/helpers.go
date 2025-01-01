@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 
 	"github.com/spf13/cobra"
 )
@@ -47,4 +49,26 @@ func customError(cmd *cobra.Command, body string) error {
 	cmd.SilenceUsage = true
 	cmd.SilenceErrors = true
 	return errors.New("ERROR: " + body)
+}
+
+func listBody(cmd *cobra.Command, err error, code int, body string) error {
+	if err != nil {
+		return err
+	}
+
+	if code != http.StatusOK {
+		return customError(cmd, body)
+	}
+
+	fmt.Println(body)
+	return nil
+}
+
+func GenresString(s []string) string {
+	var str string
+	for _, value := range s {
+		str = str + fmt.Sprintf("%s,", value)
+	}
+
+	return str
 }

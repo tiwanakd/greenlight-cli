@@ -16,11 +16,7 @@ var (
 
 	activationToken    string
 	authorizationToken string
-
-	movieTitle   string
-	movieYear    int32
-	movieRuntime string
-	movieGenres  []string
+	passwordResetToken string
 )
 
 var apiClient = client.New()
@@ -37,7 +33,7 @@ var healthCheckCmd = &cobra.Command{
 	Use:   "healthcheck",
 	Short: "check the health of the greenlight api",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err, code, _, body := apiClient.NewRequest(http.MethodGet, "/v1/healthcheck", http.NoBody, nil)
+		err, code, body := apiClient.NewRequest(http.MethodGet, "/v1/healthcheck", http.NoBody, nil)
 		if err != nil {
 			return err
 		}
@@ -65,7 +61,7 @@ var loginCmd = &cobra.Command{
 			return err
 		}
 
-		err, code, _, body := apiClient.NewRequest(http.MethodPost, "/v1/tokens/authentication", js, nil)
+		err, code, body := apiClient.NewRequest(http.MethodPost, "/v1/tokens/authentication", js, nil)
 		if err != nil {
 			return err
 		}
@@ -84,13 +80,29 @@ var loginCmd = &cobra.Command{
 	},
 }
 
+var logoutCmd = &cobra.Command{
+	Use:   "logout",
+	Short: "logout the current user",
+	Long:  "removes the token file and which works as logging off the user",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := removeAuth()
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("You have been logged out successfully!")
+		return nil
+	},
+}
+
 func init() {
 	loginCmd.Flags().StringVarP(&userEmail, "email", "e", "", "email of user to register")
 	loginCmd.Flags().StringVarP(&userPassword, "password", "p", "", "password of user to register")
 	loginCmd.MarkFlagRequired("email")
 	loginCmd.MarkFlagRequired("password")
-	rootCmd.AddCommand(loginCmd)
 
+	rootCmd.AddCommand(loginCmd)
+	rootCmd.AddCommand(logoutCmd)
 	rootCmd.AddCommand(movieCmd)
 	rootCmd.AddCommand(userCmd)
 	rootCmd.AddCommand(tokenCmd)

@@ -15,7 +15,7 @@ var userCmd = &cobra.Command{
 a new user can register, activate and update their password`,
 }
 
-var registerUserCmd = &cobra.Command{
+var userRegisterCmd = &cobra.Command{
 	Use:   "register",
 	Short: "register a new user",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -29,7 +29,7 @@ var registerUserCmd = &cobra.Command{
 			return err
 		}
 
-		err, code, _, body := apiClient.NewRequest(http.MethodPost, "/v1/users", jsReader, nil)
+		err, code, body := apiClient.NewRequest(http.MethodPost, "/v1/users", jsReader, nil)
 		if err != nil {
 			return err
 		}
@@ -43,7 +43,7 @@ var registerUserCmd = &cobra.Command{
 	},
 }
 
-var activateUserCmd = &cobra.Command{
+var userActivateCmd = &cobra.Command{
 	Use:   "activate",
 	Short: "active a user with provided token",
 	Long: `this command will active the user with the provided token; 
@@ -69,7 +69,7 @@ given the token is valid anod not expired`,
 			return err
 		}
 
-		err, code, _, body := apiClient.NewRequest(http.MethodPut, "/v1/users/activated", js, nil)
+		err, code, body := apiClient.NewRequest(http.MethodPut, "/v1/users/activated", js, nil)
 		if err != nil {
 			return err
 		}
@@ -83,16 +83,50 @@ given the token is valid anod not expired`,
 	},
 }
 
+var userPasswordResetCmd = &cobra.Command{
+	Use:   "password-reset",
+	Short: "reset password with a token",
+	Long:  "reset a users password with a token as sent to their email",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		jsonMap := newJSONMap()
+		jsonMap.add("token", passwordResetToken)
+		jsonMap.add("password", userPassword)
+
+		js, err := jsonMap.createJSONReader()
+		if err != nil {
+			return err
+		}
+
+		err, code, body := apiClient.NewRequest(http.MethodPut, "/v1/users/password", js, nil)
+		if err != nil {
+			return err
+		}
+
+		if code != http.StatusOK {
+			return customError(cmd, body)
+		}
+
+		fmt.Println(body)
+		return nil
+	},
+}
+
 func init() {
-	registerUserCmd.Flags().StringVarP(&userName, "name", "n", "", "name of user to register")
-	registerUserCmd.Flags().StringVarP(&userEmail, "email", "e", "", "email of user to register")
-	registerUserCmd.Flags().StringVarP(&userPassword, "password", "p", "", "password of user to register")
-	registerUserCmd.MarkFlagRequired("name")
-	registerUserCmd.MarkFlagRequired("email")
-	registerUserCmd.MarkFlagRequired("password")
+	userRegisterCmd.Flags().StringVarP(&userName, "name", "n", "", "name of user to register")
+	userRegisterCmd.Flags().StringVarP(&userEmail, "email", "e", "", "email of user to register")
+	userRegisterCmd.Flags().StringVarP(&userPassword, "password", "p", "", "password of user to register")
+	userRegisterCmd.MarkFlagRequired("name")
+	userRegisterCmd.MarkFlagRequired("email")
+	userRegisterCmd.MarkFlagRequired("password")
 
-	activateUserCmd.Flags().StringVarP(&activationToken, "token", "t", "", "activation token for the user")
+	userActivateCmd.Flags().StringVarP(&activationToken, "token", "t", "", "activation token for the user")
 
-	userCmd.AddCommand(registerUserCmd)
-	userCmd.AddCommand(activateUserCmd)
+	userPasswordResetCmd.Flags().StringVarP(&userPassword, "password", "p", "", "new password for the user")
+	userPasswordResetCmd.Flags().StringVarP(&passwordResetToken, "token", "t", "", "token for password reset")
+	userPasswordResetCmd.MarkFlagRequired("password")
+	userPasswordResetCmd.MarkFlagRequired("token")
+
+	userCmd.AddCommand(userRegisterCmd)
+	userCmd.AddCommand(userActivateCmd)
+	userCmd.AddCommand(userPasswordResetCmd)
 }

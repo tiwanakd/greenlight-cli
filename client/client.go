@@ -25,10 +25,10 @@ func New() Client {
 
 // Create a Method that will handle all the request to our client.
 // This Method will return an error (if any), response code, response header, and response body
-func (c *Client) NewRequest(method string, url string, body io.Reader, headers http.Header) (error, int, http.Header, string) {
+func (c *Client) NewRequest(method string, url string, body io.Reader, headers http.Header) (error, int, string) {
 	req, err := http.NewRequest(method, baseURL+url, body)
 	if err != nil {
-		return err, 0, http.Header{}, ""
+		return err, 0, ""
 	}
 
 	//add the headers (if provided) to the request
@@ -38,15 +38,15 @@ func (c *Client) NewRequest(method string, url string, body io.Reader, headers h
 
 	resp, err := c.Do(req)
 	if err != nil {
-		return err, 0, http.Header{}, ""
+		return err, 0, ""
 	}
 
 	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err, 0, http.Header{}, ""
+		return err, 0, ""
 	}
 	respBody = bytes.TrimSpace(respBody)
 
-	return nil, resp.StatusCode, resp.Header, string(respBody)
+	return nil, resp.StatusCode, string(respBody)
 }
