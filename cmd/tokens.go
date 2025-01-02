@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -55,16 +56,16 @@ func requestToken(url string, cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err, code, body := apiClient.NewRequest(http.MethodPost, url, jsReader, nil)
-	if err != nil {
-		return err
+	resp := apiClient.NewRequest(http.MethodPost, url, jsReader, nil)
+	if resp.Err != nil {
+		return resp.Err
 	}
 
-	if code != http.StatusAccepted {
-		return customError(cmd, body)
+	if resp.Code != http.StatusAccepted {
+		return customError(cmd, resp.Body)
 	}
 
-	fmt.Println(body)
+	fmt.Fprintln(os.Stdout, resp.Body)
 	return nil
 }
 

@@ -15,7 +15,6 @@ var (
 	userPassword string
 
 	activationToken    string
-	authorizationToken string
 	passwordResetToken string
 )
 
@@ -33,16 +32,16 @@ var healthCheckCmd = &cobra.Command{
 	Use:   "healthcheck",
 	Short: "check the health of the greenlight api",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err, code, body := apiClient.NewRequest(http.MethodGet, "/v1/healthcheck", http.NoBody, nil)
-		if err != nil {
-			return err
+		resp := apiClient.NewRequest(http.MethodGet, "/v1/healthcheck", http.NoBody, nil)
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		if code != http.StatusOK {
-			return customError(cmd, body)
+		if resp.Code != http.StatusOK {
+			return customError(cmd, resp.Body)
 		}
 
-		fmt.Printf("Body: %s\n", body)
+		fmt.Println(resp.Body)
 		return nil
 	},
 }
@@ -61,16 +60,16 @@ var loginCmd = &cobra.Command{
 			return err
 		}
 
-		err, code, body := apiClient.NewRequest(http.MethodPost, "/v1/tokens/authentication", js, nil)
-		if err != nil {
-			return err
+		resp := apiClient.NewRequest(http.MethodPost, "/v1/tokens/authentication", js, nil)
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		if code != http.StatusCreated {
-			return customError(cmd, body)
+		if resp.Code != http.StatusCreated {
+			return customError(cmd, resp.Body)
 		}
 
-		err = addAuthTokenToFile([]byte(body))
+		err = addAuthTokenToFile([]byte(resp.Body))
 		if err != nil {
 			return err
 		}

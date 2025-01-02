@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
 	"os"
 	"time"
 )
@@ -22,7 +23,7 @@ func openAuthFile(perm int) (*os.File, error) {
 	if err != nil {
 		switch {
 		case err.Error() == `open .auth_token.json: no such file or directory`:
-			return nil, errors.New("Authorization required, please login using [login] command")
+			return nil, errors.New("authorization required, please login using [login] command")
 		default:
 			return nil, err
 		}
@@ -71,8 +72,33 @@ func extractAuthToken() (authToken, error) {
 	return tokenMap["authentication_token"], nil
 }
 
+func setAuthHeader() (http.Header, error) {
+	authToken, err := extractAuthToken()
+	if err != nil {
+		return nil, err
+	}
+	if authToken.Token == "" || authToken.Expiry.Before(time.Now()) {
+		return nil, errors.New("autorization token expired or not found; Please login again using [login] command")
+	}
+
+	//create an empty header map and add the authorizion token that will be passed onto the api calls
+	authorizationHeader := http.Header{}
+	authorizationHeader.Add("Authorization", "Bearer "+authToken.Token)
+
+	return authorizationHeader, nil
+}
+
 // remove the auth file to allow the user to logout as needed
 func removeAuth() error {
+	//extract the authoriztion token and check if it is empty or expired
+	authToken, err := extractAuthToken()
+	if err != nil {
+		return err
+	}
+	if authToken.Token == "" || authToken.Expiry.Before(time.Now()) {
+		return errors.New("autorization token expired or not found; Please login again using [login] command")
+	}
+
 	file, err := openAuthFile(os.O_WRONLY)
 	if err != nil {
 		return err

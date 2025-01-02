@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/tiwanakd/greenlight-cli/client"
 )
 
 type JsonMap struct {
@@ -51,24 +53,15 @@ func customError(cmd *cobra.Command, body string) error {
 	return errors.New("ERROR: " + body)
 }
 
-func listBody(cmd *cobra.Command, err error, code int, body string) error {
-	if err != nil {
-		return err
+func listBody(cmd *cobra.Command, resp client.Response) error {
+	if resp.Err != nil {
+		return resp.Err
 	}
 
-	if code != http.StatusOK {
-		return customError(cmd, body)
+	if resp.Code != http.StatusOK {
+		return customError(cmd, resp.Body)
 	}
 
-	fmt.Println(body)
+	fmt.Fprintln(os.Stdout, resp.Body)
 	return nil
-}
-
-func GenresString(s []string) string {
-	var str string
-	for _, value := range s {
-		str = str + fmt.Sprintf("%s,", value)
-	}
-
-	return str
 }

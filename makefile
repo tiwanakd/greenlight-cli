@@ -24,10 +24,13 @@ run/cli:
 ## tidy: format all .go files and tidy module dependencies
 .PHONY: tidy
 tidy:
-	@echo 'Formatting .go files'
+	@echo 'Formatting .go files...'
 	go fmt ./...
-	@echo 'Tidying module dependencies'
+	@echo 'Tidying module dependencies...'
 	go mod tidy
+	@echo 'Verifying and vendoring module dependencies...'
+	go mod verify
+	go mod vendor
 
 ## audit: run quality control check
 .PHONY: audit
@@ -40,3 +43,16 @@ audit:
 	staticcheck ./...
 	@echo 'Running tests...'
 	go test -race -vet=off ./...
+
+# ========================================================================================= #
+# BUILD 
+# ========================================================================================= #
+
+## build/cli: Build the cli application
+.PHONY: build/cli
+build/cli:
+	@echo 'Building cli application...'
+	go build -ldflags='-s' -o=./bin/greenlight .
+	GOOS=linux GOARCH=amd64 go build -ldflags='-s' -o=./bin/linux_amd64/greenlight .
+	GOOS=windows GOARCH=amd64 go build -ldflags='-s' -o=./bin/windows_amd64/greenlight.exe .
+	GOOS=darwin GOARCH=amd64 go build -ldflags='-s' -o=./bin/darwin_amd64/greenlight .

@@ -29,16 +29,16 @@ var userRegisterCmd = &cobra.Command{
 			return err
 		}
 
-		err, code, body := apiClient.NewRequest(http.MethodPost, "/v1/users", jsReader, nil)
-		if err != nil {
-			return err
+		resp := apiClient.NewRequest(http.MethodPost, "/v1/users", jsReader, nil)
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		if code != http.StatusAccepted {
-			return customError(cmd, body)
+		if resp.Code != http.StatusAccepted {
+			return customError(cmd, resp.Body)
 		}
 
-		fmt.Fprintf(os.Stdout, "User Created!\nUser Details:\n%s\n", body)
+		fmt.Fprintf(os.Stdout, "User Created!\nUser Details:\n%s\n", resp.Body)
 		return nil
 	},
 }
@@ -69,16 +69,17 @@ given the token is valid anod not expired`,
 			return err
 		}
 
-		err, code, body := apiClient.NewRequest(http.MethodPut, "/v1/users/activated", js, nil)
-		if err != nil {
-			return err
+		resp := apiClient.NewRequest(http.MethodPut, "/v1/users/activated", js, nil)
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		if code != http.StatusOK {
-			return customError(cmd, body)
+		if resp.Code != http.StatusOK {
+			return customError(cmd, resp.Body)
 		}
 
-		fmt.Printf("User Activated!\n%s\n", body)
+		fmt.Fprintf(os.Stdout, "User Activated!\n%s\n", resp.Body)
+
 		return nil
 	},
 }
@@ -97,16 +98,16 @@ var userPasswordResetCmd = &cobra.Command{
 			return err
 		}
 
-		err, code, body := apiClient.NewRequest(http.MethodPut, "/v1/users/password", js, nil)
-		if err != nil {
-			return err
+		resp := apiClient.NewRequest(http.MethodPut, "/v1/users/password", js, nil)
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		if code != http.StatusOK {
-			return customError(cmd, body)
+		if resp.Code != http.StatusOK {
+			return customError(cmd, resp.Body)
 		}
 
-		fmt.Println(body)
+		fmt.Fprint(os.Stdout, resp.Body)
 		return nil
 	},
 }

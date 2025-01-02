@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -44,26 +44,21 @@ year, runtime and Genres`,
 			return err
 		}
 
-		authToken, err := extractAuthToken()
-		if authToken.Token == "" || authToken.Expiry.Before(time.Now()) {
-			return errors.New("autorization token expired or not found; Please login again using [login] command")
-		}
-
-		//Since the "POST /v1/movies" expects a "Authorization: Bearer [token]" header
-		//create an empty header map and add the authorizion token
-		authorizationHeader := http.Header{}
-		authorizationHeader.Add("Authorization", "Bearer "+authToken.Token)
-
-		err, code, body := apiClient.NewRequest(http.MethodPost, "/v1/movies", js, authorizationHeader)
+		authHeader, err := setAuthHeader()
 		if err != nil {
 			return err
 		}
 
-		if code != http.StatusCreated {
-			return customError(cmd, body)
+		resp := apiClient.NewRequest(http.MethodPost, "/v1/movies", js, authHeader)
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		fmt.Printf("New Movie\n%s", body)
+		if resp.Code != http.StatusCreated {
+			return customError(cmd, resp.Body)
+		}
+
+		fmt.Fprintf(os.Stdout, "New Movie\n%s", resp.Body)
 
 		return nil
 	},
@@ -75,13 +70,10 @@ var movieListCmd = &cobra.Command{
 	Long: `list the movies as per the flags provided,
 if no flags are provided all the movies will be listed`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		authToken, err := extractAuthToken()
+		authHeader, err := setAuthHeader()
 		if err != nil {
 			return err
 		}
-
-		authHeader := http.Header{}
-		authHeader.Add("Authorization", "Bearer "+authToken.Token)
 
 		id := cmd.Flag("id")
 		title := cmd.Flag("title")
@@ -90,15 +82,15 @@ if no flags are provided all the movies will be listed`,
 
 		switch {
 		case id.Changed:
-			err, code, body := apiClient.NewRequest(http.MethodGet, fmt.Sprint("/v1/movies/", movieID), http.NoBody, authHeader)
-			return listBody(cmd, err, code, body)
+			resp := apiClient.NewRequest(http.MethodGet, fmt.Sprint("/v1/movies/", movieID), http.NoBody, authHeader)
+			return listBody(cmd, resp)
 		case title.Changed || genres.Changed || sort.Changed:
 			url := fmt.Sprintf("/v1/movies?title=%s&genres=%s&sort=%s", movieTitle, strings.Join(movieGenres, ","), movieSort)
-			err, code, body := apiClient.NewRequest(http.MethodGet, url, http.NoBody, authHeader)
-			return listBody(cmd, err, code, body)
+			resp := apiClient.NewRequest(http.MethodGet, url, http.NoBody, authHeader)
+			return listBody(cmd, resp)
 		default:
-			err, code, body := apiClient.NewRequest(http.MethodGet, "/v1/movies", http.NoBody, authHeader)
-			return listBody(cmd, err, code, body)
+			resp := apiClient.NewRequest(http.MethodGet, "/v1/movies", http.NoBody, authHeader)
+			return listBody(cmd, resp)
 		}
 
 	},
@@ -137,24 +129,21 @@ var movieUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		authToken, err := extractAuthToken()
+		authHeader, err := setAuthHeader()
 		if err != nil {
 			return err
 		}
 
-		authHeader := http.Header{}
-		authHeader.Add("Authorization", "Bearer "+authToken.Token)
-
-		err, code, body := apiClient.NewRequest(http.MethodPatch, fmt.Sprint("/v1/movies/", movieID), js, authHeader)
-		if err != nil {
-			return err
+		resp := apiClient.NewRequest(http.MethodPatch, fmt.Sprint("/v1/movies/", movieID), js, authHeader)
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		if code != http.StatusOK {
-			return customError(cmd, body)
+		if resp.Code != http.StatusOK {
+			return customError(cmd, resp.Body)
 		}
 
-		fmt.Println(body)
+		fmt.Fprintln(os.Stdout, resp.Body)
 		return nil
 	},
 }
@@ -166,7 +155,7 @@ var movieDeleteCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		idFlag := cmd.Flag("id")
 
-		if len(args) < 0 && !idFlag.Changed {
+		if len(args) < 1 && !idFlag.Changed {
 			return errors.New("movie id needs to provided")
 		}
 
@@ -181,24 +170,21 @@ var movieDeleteCmd = &cobra.Command{
 			id = movieID
 		}
 
-		authToken, err := extractAuthToken()
+		authHeader, err := setAuthHeader()
 		if err != nil {
 			return err
 		}
 
-		authHeader := http.Header{}
-		authHeader.Add("Authorization", "Bearer "+authToken.Token)
-
-		err, code, body := apiClient.NewRequest(http.MethodDelete, fmt.Sprint("/v1/movies/", id), http.NoBody, authHeader)
-		if err != nil {
-			return err
+		resp := apiClient.NewRequest(http.MethodDelete, fmt.Sprint("/v1/movies/", id), http.NoBody, authHeader)
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		if code != http.StatusOK {
-			return customError(cmd, body)
+		if resp.Code != http.StatusOK {
+			return customError(cmd, resp.Body)
 		}
 
-		fmt.Println(body)
+		fmt.Fprintln(os.Stdout, resp.Body)
 		return nil
 	},
 }
